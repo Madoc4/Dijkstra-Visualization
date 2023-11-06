@@ -8,19 +8,19 @@ screen_height = screen_info.current_h
 screen = pygame.display.set_mode((screen_width, screen_height), pygame.FULLSCREEN)
 screen.fill((255, 255, 255))
 
-def plot_nodes(num_nodes: int, ) -> list:
+def plot_nodes(num_rows: int, num_cols: int) -> list:
     nodes = []
     x_buffer = screen_width // 10
     y_buffer = screen_height // 10
-    rows = num_nodes
-    cols = num_nodes
+    rows = num_rows
+    cols = num_cols
 
     x_spacing = (screen_width - 2 * x_buffer) // cols
     y_spacing = (screen_height - 2 * y_buffer) // rows
 
     for i in range(rows):
         for j in range(cols):
-            x = x_buffer + j * x_spacing
+            x = x_buffer + j * x_spacing + 150
             y = y_buffer + i * y_spacing
             nodes.append((x, y))
 
@@ -127,19 +127,23 @@ while True:
         num_nodes_button = Button("Number of Rows/Columns: ", 10, screen_height // 3 * 2 + 100, "freesansbold.ttf", 20, (0, 0, 0), False)
         num_nodes_button.draw(screen)
         num_nodes = 0
+       
         if len(input_text) > 0 and int(input_text) > 0:
             num_nodes = int(input_text)
-            nodes = plot_nodes(num_nodes)
+            nodes = plot_nodes(5, 2)
             edges = plot_edges(nodes, num_nodes)
+        
         if delete:
             num_nodes = input_text[:-1]
             nodes = []
             edges = []
             delete = False
             pygame.surface.Surface.fill(screen, (255, 255, 255))
+        
         if new_inp:
             pygame.surface.Surface.fill(screen, (255, 255, 255))
             new_inp = False
+        
         for node in nodes:
             pygame.draw.circle(screen, (0, 0, 0), node, 5)
         for edge in edges:
