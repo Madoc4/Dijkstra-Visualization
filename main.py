@@ -1,4 +1,7 @@
 import pygame
+from collections import defaultdict
+import random
+import math
 
 pygame.init()
 
@@ -7,6 +10,8 @@ screen_width = screen_info.current_w
 screen_height = screen_info.current_h
 screen = pygame.display.set_mode((screen_width, screen_height), pygame.FULLSCREEN)
 screen.fill((255, 255, 255))
+
+def Dijkstra(G: defaultdict) -> dict:
 
 def plot_nodes(num_rows: int, num_cols: int) -> list:
     nodes = []
@@ -26,15 +31,30 @@ def plot_nodes(num_rows: int, num_cols: int) -> list:
 
     return nodes
 
-
-def plot_edges(nodes: list, num_nodes: int) -> list:
+def plot_edges(nodes: list, num_rows: int, num_columns: int) -> list:
     edges = []
+
     for i in range(len(nodes)):
-        if i + 1 < len(nodes) and (i + 1) % num_nodes != 0:
+        if (i + 1) % num_columns != 0 and i + 1 < len(nodes):
             edges.append((nodes[i], nodes[i + 1]))
-        if i + num_nodes < len(nodes):
-            edges.append((nodes[i], nodes[i + num_nodes]))
+        if i + num_columns < len(nodes):
+            edges.append((nodes[i], nodes[i + num_columns]))
     return edges
+
+def get_dist(node1: list, node2: list) -> float:
+    return ((node1[0] - node2[0])**2 + (node1[1] - node2[1])**2)**0.5
+
+def randomize_weights(dist: float) -> int:
+    return math.floor(dist * (random.choices([i for i in range(1,6)], weights=(50, 25, 15, 7, 3))[0]) / 100)
+
+def make_graph(edges: list) -> dict:
+    G = defaultdict(list)
+    for edge in edges:
+        dist = get_dist(edge[0], edge[1])
+        weight = randomize_weights(dist)
+        G[edge[0]].append([edge[1], weight])
+        G[edge[1]].append([edge[0], weight])
+    return G
 
 class Button:
 
@@ -62,7 +82,6 @@ class Button:
         return self.text_rect.collidepoint(mouse_pos) if self.clickable else False
     
     def check_hover(self, mouse_pos):
-        # if mouse is hovering over button, trace rectangle around button
         if self.text_rect.collidepoint(mouse_pos):
             pygame.draw.rect(screen, (0, 0, 0), self.text_rect, 1)
         else:
@@ -84,6 +103,7 @@ input_text = ''
 active = False
 delete = False
 new_inp = False
+changed = False
 font = pygame.font.Font('freesansbold.ttf', 20)
 
 while True:
@@ -128,20 +148,25 @@ while True:
         num_nodes_button.draw(screen)
         num_nodes = 0
        
-        if len(input_text) > 0 and int(input_text) > 0:
-            num_nodes = int(input_text)
-            nodes = plot_nodes(5, 2)
-            edges = plot_edges(nodes, num_nodes)
-        
-        if delete:
-            num_nodes = input_text[:-1]
+        if len(input_text.split()) == 2:
+            num_rows, num_columns = int(input_text.split()[0]), int(input_text.split()[1])
+            nodes = plot_nodes(num_rows, num_columns)
+            edges = plot_edges(nodes, num_rows, num_columns)
+            if not changed:
+                print(make_graph(edges))
+                printed = True
+
+        if delete: 
+            num_nodes = input_text[:-1] 
             nodes = []
             edges = []
             delete = False
+            changed = True
             pygame.surface.Surface.fill(screen, (255, 255, 255))
         
         if new_inp:
             pygame.surface.Surface.fill(screen, (255, 255, 255))
+            chnaged = True
             new_inp = False
         
         for node in nodes:
