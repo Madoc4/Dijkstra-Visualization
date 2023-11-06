@@ -189,7 +189,6 @@ while True:
                 distance = distances[nodes[-1]]
                 p_to_end = p[end_node]
                 changed = False
-            print(end_node, p_to_end)
             plot_shortest(p_to_end)
 
         if delete: 
