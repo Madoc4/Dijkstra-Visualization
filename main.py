@@ -2,6 +2,8 @@ import pygame
 from collections import defaultdict
 import random
 import math
+from heapq import heapify, heappop, heappush
+
 
 pygame.init()
 
@@ -11,7 +13,25 @@ screen_height = screen_info.current_h
 screen = pygame.display.set_mode((screen_width, screen_height), pygame.FULLSCREEN)
 screen.fill((255, 255, 255))
 
-def Dijkstra(G: defaultdict) -> dict:
+def dijkstra_path(G, s):
+    E = {s}
+    d = {s: 0}
+    p = {s: [s]}
+    heap = [[n[1], s, n[0]] for n in G[s]]
+    heapify(heap)
+
+    while len(E) < len(G):
+        n = heappop(heap)
+        if n[-1] in E:
+            continue
+        E.add(n[-1])
+        d[n[-1]] = n[0]
+        p[n[-1]] = p[n[1]] + [n[-1]]
+        for tail, length in G[n[-1]]:
+            if tail not in E:
+                heappush(heap, [length + d[n[-1]], n[-1], tail])
+    return d, p
+
 
 def plot_nodes(num_rows: int, num_cols: int) -> list:
     nodes = []
@@ -45,7 +65,7 @@ def get_dist(node1: list, node2: list) -> float:
     return ((node1[0] - node2[0])**2 + (node1[1] - node2[1])**2)**0.5
 
 def randomize_weights(dist: float) -> int:
-    return math.floor(dist * (random.choices([i for i in range(1,6)], weights=(50, 25, 15, 7, 3))[0]) / 100)
+    return math.floor(dist * (random.choices([i for i in range(1,6)], weights=(50, 25, 15, 7, 3))[0]) / 100 + 1)
 
 def make_graph(edges: list) -> dict:
     G = defaultdict(list)
@@ -55,6 +75,13 @@ def make_graph(edges: list) -> dict:
         G[edge[0]].append([edge[1], weight])
         G[edge[1]].append([edge[0], weight])
     return G
+
+def plot_shortest(p: list):
+    print("here")
+    for node in p:
+        pygame.draw.circle(screen, (255, 0, 0), node, 5)
+    for i in range(len(p) - 1):
+        pygame.draw.line(screen, (0, 0, 255), p[i], p[i + 1], 3)
 
 class Button:
 
@@ -104,6 +131,9 @@ active = False
 delete = False
 new_inp = False
 changed = False
+distances = {}
+distance = None
+p = {}
 font = pygame.font.Font('freesansbold.ttf', 20)
 
 while True:
@@ -153,8 +183,13 @@ while True:
             nodes = plot_nodes(num_rows, num_columns)
             edges = plot_edges(nodes, num_rows, num_columns)
             if not changed:
-                print(make_graph(edges))
-                printed = True
+                start_node = nodes[0]
+                end_node = nodes[-1]
+                G = make_graph(edges)
+                distances, p = dijkstra_path(G, nodes[0])
+                distance = distances[nodes[-1]]
+                changed = True
+            plot_shortest(p[nodes[-1]])
 
         if delete: 
             num_nodes = input_text[:-1] 
