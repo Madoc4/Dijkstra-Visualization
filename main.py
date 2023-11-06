@@ -32,7 +32,6 @@ def dijkstra_path(G, s):
                 heappush(heap, [length + d[n[-1]], n[-1], tail])
     return d, p
 
-
 def plot_nodes(num_rows: int, num_cols: int) -> list:
     nodes = []
     x_buffer = screen_width // 10
@@ -77,7 +76,6 @@ def make_graph(edges: list) -> dict:
     return G
 
 def plot_shortest(p: list):
-    print("here")
     for node in p:
         pygame.draw.circle(screen, (255, 0, 0), node, 5)
     for i in range(len(p) - 1):
@@ -133,6 +131,7 @@ new_inp = False
 changed = False
 distances = {}
 distance = None
+p_to_end = []
 p = {}
 font = pygame.font.Font('freesansbold.ttf', 20)
 
@@ -182,14 +181,16 @@ while True:
             num_rows, num_columns = int(input_text.split()[0]), int(input_text.split()[1])
             nodes = plot_nodes(num_rows, num_columns)
             edges = plot_edges(nodes, num_rows, num_columns)
-            if not changed:
+            if changed:
                 start_node = nodes[0]
                 end_node = nodes[-1]
                 G = make_graph(edges)
                 distances, p = dijkstra_path(G, nodes[0])
                 distance = distances[nodes[-1]]
-                changed = True
-            plot_shortest(p[nodes[-1]])
+                p_to_end = p[end_node]
+                changed = False
+            print(end_node, p_to_end)
+            plot_shortest(p_to_end)
 
         if delete: 
             num_nodes = input_text[:-1] 
@@ -201,7 +202,7 @@ while True:
         
         if new_inp:
             pygame.surface.Surface.fill(screen, (255, 255, 255))
-            chnaged = True
+            changed = True
             new_inp = False
         
         for node in nodes:
