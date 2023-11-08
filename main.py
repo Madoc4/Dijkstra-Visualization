@@ -4,6 +4,7 @@ import random
 import math
 from heapq import heapify, heappop, heappush
 
+# TO-DO: Fix distance formula on low rows high columns
 
 pygame.init()
 
@@ -110,9 +111,28 @@ def make_graph(edges: list) -> dict:
 
 def plot_shortest(p: list):
     for node in p:
-        pygame.draw.circle(screen, (255, 0, 0), node, 5)
+        pygame.draw.circle(screen, (255, 0, 0), node, 10)
     for i in range(len(p) - 1):
         pygame.draw.line(screen, (0, 0, 255), p[i], p[i + 1], 3)
+
+def plot_weigths(G: dict, path: list, d: int):
+    dist = 0
+    for i in range(len(path[1:])):
+        dist = G[path[i]][0][1]
+        # if vertical edge
+        if path[i][0] == path[i + 1][0]:
+            x = path[i][0] - 50
+            y = (path[i][1] + path[i + 1][1]) // 2
+        # if horizontal
+        elif path[i][1] == path[i+1][1]:
+            x = (path[i][0] + path[i + 1][0]) // 2
+            y = path[i][1] - 50
+        text_surface = font.render(str(dist), True, (0, 0, 0))
+        screen.blit(text_surface, (x, y))
+    text_surface = font.render(("Total Distance: " + str(d)), True, (0, 0, 0))
+    screen.blit(text_surface, (screen_width//2, screen_height//10 * 9))
+
+
 
 
 buttons = []
@@ -191,7 +211,9 @@ while True:
                 p_to_end = p[end_node]
                 changed = False
             plot_shortest(p_to_end)
-
+            plot_weigths(G, p_to_end, distance)
+            # total distance and path distances wrong according to G
+            print(sum(G[edge][0][1] for edge in p_to_end))
         if delete: 
             num_nodes = input_text[:-1] 
             nodes = []
