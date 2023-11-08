@@ -4,7 +4,8 @@ import random
 import math
 from heapq import heapify, heappop, heappush
 
-# TO-DO: Fix distance formula on low rows high columns
+# TO-DO: For Set-Edges: group nodes by connecting them to the two closest nodes. check for scc's and then connect them using Union Find
+
 
 pygame.init()
 
@@ -94,8 +95,8 @@ def plot_edges(nodes: list, num_rows: int, num_columns: int) -> list:
             edges.append((nodes[i], nodes[i + num_columns]))
     return edges
 
-def get_dist(node1: list, node2: list) -> float:
-    return ((node1[0] - node2[0])**2 + (node1[1] - node2[1])**2)**0.5
+def get_dist(node1: list, node2: list):
+    return math.sqrt((node1[0] - node2[0])**2 + (node1[1] - node2[1])**2)
 
 def randomize_weights(dist: float) -> int:
     return math.floor(dist * (random.choices([i for i in range(1,6)], weights=(50, 25, 15, 7, 3))[0]) / 100 + 1)
@@ -104,7 +105,8 @@ def make_graph(edges: list) -> dict:
     G = defaultdict(list)
     for edge in edges:
         dist = get_dist(edge[0], edge[1])
-        weight = randomize_weights(dist)
+        print(edge, dist)
+        weight = dist
         G[edge[0]].append([edge[1], weight])
         G[edge[1]].append([edge[0], weight])
     return G
@@ -115,25 +117,43 @@ def plot_shortest(p: list):
     for i in range(len(p) - 1):
         pygame.draw.line(screen, (0, 0, 255), p[i], p[i + 1], 3)
 
-def plot_weigths(G: dict, path: list, d: int):
-    dist = 0
-    for i in range(len(path[1:])):
-        dist = G[path[i]][0][1]
-        # if vertical edge
-        if path[i][0] == path[i + 1][0]:
-            x = path[i][0] - 50
-            y = (path[i][1] + path[i + 1][1]) // 2
-        # if horizontal
-        elif path[i][1] == path[i+1][1]:
-            x = (path[i][0] + path[i + 1][0]) // 2
-            y = path[i][1] - 50
+def plot_weights(G: dict, path: list, d: int):
+    total_distance = 0
+    nodes_list = []
+    weights = []
+    print(G)
+    for i in range(len(path) - 1):
+        node1, node2 = path[i], path[i + 1]
+        nodes_list.append((node1, node2))
+        for nodes in G[path[i]]:
+            if node2 in nodes:
+                print(node2)
+                weights.append(nodes[1])
+    
+    for i in range(len(nodes_list)):
+        node1, node2 = nodes_list[i]
+        dist = weights[i]
+        if node1[0] == node2[0]:  
+            x = node1[0] - 50
+            y = (node1[1] + node2[1]) // 2
+        elif node1[1] == node2[1]: 
+            x = (node1[0] + node2[0]) // 2
+            y = node1[1] - 50
         text_surface = font.render(str(dist), True, (0, 0, 0))
         screen.blit(text_surface, (x, y))
-    text_surface = font.render(("Total Distance: " + str(d)), True, (0, 0, 0))
-    screen.blit(text_surface, (screen_width//2, screen_height//10 * 9))
+    
+    text_surface = font.render(("Total Distance: " + str(sum(weights))), True, (0, 0, 0))
+    screen.blit(text_surface, (screen_width // 2, screen_height // 10 * 9))
 
-
-
+def get_closest_node(pos: tuple, nodes: list) -> list:
+    closest_node = None
+    closest_dist = float('inf')
+    for node in nodes:
+        dist = get_dist(pos, node)
+        if dist < closest_dist:
+            closest_dist = dist
+            closest_node = node
+    return closest_node
 
 buttons = []
 nodes = []
@@ -154,6 +174,9 @@ distances = {}
 distance = None
 p_to_end = []
 p = {}
+start_node = None
+end_node = None
+cleared = False
 font = pygame.font.Font('freesansbold.ttf', 20)
 
 while True:
@@ -168,6 +191,20 @@ while True:
                 active = True
             else: 
                 active = False
+            if set_edges_button.check_click(pygame.mouse.get_pos()):
+                auto_edges = False
+                input_text = ''
+                nodes = []
+                edges = []
+                changed = True
+                pygame.surface.Surface.fill(screen, (255, 255, 255))
+            if auto_edges_button.check_click(pygame.mouse.get_pos()):
+                auto_edges = False
+                input_text = ''
+                nodes = []
+                edges = []
+                changed = True
+                pygame.surface.Surface.fill(screen, (255, 255, 255))
 
         if event.type == pygame.KEYDOWN and auto_edges: 
             if event.key == pygame.K_BACKSPACE: 
@@ -199,21 +236,39 @@ while True:
         num_nodes = 0
        
         if len(input_text.split()) == 2:
-            num_rows, num_columns = int(input_text.split()[0]), int(input_text.split()[1])
+            num_rows, num_columns = int(input_text.split()[0].strip()), int(input_text.split()[1].strip())
             nodes = plot_nodes(num_rows, num_columns)
             edges = plot_edges(nodes, num_rows, num_columns)
-            if changed:
-                start_node = nodes[0]
-                end_node = nodes[-1]
+
+            if not start_node:
+                text_surface = font.render(("Click Start Node"), True, (0, 0, 0))
+                screen.blit(text_surface, (screen_width // 2, screen_height // 15))
+            if start_node and not end_node:
+                if cleared == False:
+                    screen.fill((255, 255, 255))
+                    cleared = True
+                text_surface = font.render(("Click End Node"), True, (0, 0, 0))
+                screen.blit(text_surface, (screen_width // 2, screen_height // 15 ))
+
+            for event in pygame.event.get():
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if not start_node:
+                        start_node = get_closest_node(pygame.mouse.get_pos(), nodes)
+                    else:
+                        end_node = get_closest_node(pygame.mouse.get_pos(), nodes)
+
+            if changed and start_node and end_node:
+                screen.fill((255, 255, 255))
                 G = make_graph(edges)
-                distances, p = dijkstra_path(G, nodes[0])
-                distance = distances[nodes[-1]]
+                distances, p = dijkstra_path(G, start_node)
+                distance = distances[end_node]
                 p_to_end = p[end_node]
                 changed = False
-            plot_shortest(p_to_end)
-            plot_weigths(G, p_to_end, distance)
-            # total distance and path distances wrong according to G
-            print(sum(G[edge][0][1] for edge in p_to_end))
+        
+                plot_shortest(p_to_end)
+                plot_weights(G, p_to_end, distance)
+
+
         if delete: 
             num_nodes = input_text[:-1] 
             nodes = []
