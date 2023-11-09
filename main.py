@@ -163,9 +163,10 @@ def get_edges(nodes: list) -> list:
 
 def get_2_closest(G: dict) -> dict:
     temp = []
-    closest = {}
+    closest = defaultdict()
     for node in G:
         closest[node] = []
+    for node in closest:
         temp = G[node]
         temp.sort(key=lambda x: x[1])
         # since undirected, both edges are connected to eachother
@@ -173,6 +174,9 @@ def get_2_closest(G: dict) -> dict:
         temp[2][1] = math.floor(temp[2][1])
         closest[node].append(temp[0])
         closest[node].append(temp[2])
+        closest[temp[0][0]].append([node, temp[0][1]])
+        closest[temp[2][0]].append([node, temp[2][1]])
+    print(closest)
     return closest
 
 
@@ -358,12 +362,11 @@ while True:
             
             if start_node and end_node:
                 screen.fill((255, 255, 255))
-                distances, p = dijkstra_path(G, start_node)
+                print(closest)
+                distances, p = dijkstra_path(closest, start_node)
                 distance = distances[end_node]
                 p_to_end = p[end_node]
                 changed = False
-                print(p_to_end)
-                print(G)
                 plot_shortest(p_to_end)
 
         for node in entered_nodes:
