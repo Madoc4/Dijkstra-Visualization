@@ -105,7 +105,6 @@ def make_graph(edges: list) -> dict:
     G = defaultdict(list)
     for edge in edges:
         dist = get_dist(edge[0], edge[1])
-        print(edge, dist)
         weight = dist
         G[edge[0]].append([edge[1], weight])
         G[edge[1]].append([edge[0], weight])
@@ -121,13 +120,11 @@ def plot_weights(G: dict, path: list, d: int):
     total_distance = 0
     nodes_list = []
     weights = []
-    print(G)
     for i in range(len(path) - 1):
         node1, node2 = path[i], path[i + 1]
         nodes_list.append((node1, node2))
         for nodes in G[path[i]]:
             if node2 in nodes:
-                print(node2)
                 weights.append(nodes[1])
     
     for i in range(len(nodes_list)):
@@ -155,6 +152,30 @@ def get_closest_node(pos: tuple, nodes: list) -> list:
             closest_node = node
     return closest_node
 
+def get_edges(nodes: list) -> list:
+    edges = []
+    for node in nodes:
+        for neighbor in nodes:
+            if node != neighbor:
+                edges.append((node, neighbor))
+
+    return edges
+
+def get_2_closest(G: dict) -> dict:
+    temp = []
+    closest = {}
+    for node in G:
+        closest[node] = []
+        temp = G[node]
+        temp.sort(key=lambda x: x[1])
+        # since undirected, both edges are connected to eachother
+        temp[0][1] = math.floor(temp[0][1])
+        temp[2][1] = math.floor(temp[2][1])
+        closest[node].append(temp[0])
+        closest[node].append(temp[2])
+    return closest
+
+
 buttons = []
 nodes = []
 edges = []
@@ -172,12 +193,17 @@ new_inp = False
 changed = False
 distances = {}
 distance = None
+set_edges = False
+first = True
 p_to_end = []
 p = {}
 start_node = None
 end_node = None
 cleared = False
+selecting = True
 font = pygame.font.Font('freesansbold.ttf', 20)
+entered_nodes = []
+G = {}
 
 while True:
     for event in pygame.event.get():
@@ -191,20 +217,38 @@ while True:
                 active = True
             else: 
                 active = False
+
+            if auto_edges and not start_node:
+                start_node = get_closest_node(pygame.mouse.get_pos(), nodes)
+            elif auto_edges:
+                end_node = get_closest_node(pygame.mouse.get_pos(), nodes)
+            
+            if selecting == True and set_edges:
+                entered_nodes.append(pygame.mouse.get_pos())
+            
+            if selecting == False and set_edges and not start_node:
+                start_node = get_closest_node(pygame.mouse.get_pos(), entered_nodes)
+            elif selecting == False and set_edges:
+                end_node = get_closest_node(pygame.mouse.get_pos(), entered_nodes)
+
             if set_edges_button.check_click(pygame.mouse.get_pos()):
                 auto_edges = False
                 input_text = ''
                 nodes = []
+                set_edges = True
                 edges = []
-                changed = True
                 pygame.surface.Surface.fill(screen, (255, 255, 255))
+
             if auto_edges_button.check_click(pygame.mouse.get_pos()):
-                auto_edges = False
+                auto_edges = True
                 input_text = ''
                 nodes = []
                 edges = []
                 changed = True
                 pygame.surface.Surface.fill(screen, (255, 255, 255))
+
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+            selecting = False
 
         if event.type == pygame.KEYDOWN and auto_edges: 
             if event.key == pygame.K_BACKSPACE: 
@@ -248,14 +292,7 @@ while True:
                     screen.fill((255, 255, 255))
                     cleared = True
                 text_surface = font.render(("Click End Node"), True, (0, 0, 0))
-                screen.blit(text_surface, (screen_width // 2, screen_height // 15 ))
-
-            for event in pygame.event.get():
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    if not start_node:
-                        start_node = get_closest_node(pygame.mouse.get_pos(), nodes)
-                    else:
-                        end_node = get_closest_node(pygame.mouse.get_pos(), nodes)
+                screen.blit(text_surface, (screen_width // 2, screen_height // 15))
 
             if changed and start_node and end_node:
                 screen.fill((255, 255, 255))
@@ -275,17 +312,62 @@ while True:
             edges = []
             delete = False
             changed = True
+            start_node = None
+            end_node = None
             pygame.surface.Surface.fill(screen, (255, 255, 255))
         
         if new_inp:
             pygame.surface.Surface.fill(screen, (255, 255, 255))
             changed = True
+            start_node = None
+            end_node = None
             new_inp = False
         
         for node in nodes:
             pygame.draw.circle(screen, (0, 0, 0), node, 5)
         for edge in edges:
             pygame.draw.line(screen, (0, 0, 0), edge[0], edge[1], 1)
+
+    if set_edges:
+        if selecting:
+            text_surface = font.render(("Click To Add Node. Click Space to Stop."), True, (0, 0, 0))
+            screen.blit(text_surface, (screen_width / 2, screen_height // 15))
+
+        if selecting == False:
+            if first:
+                edges = get_edges(entered_nodes)
+                G = make_graph(edges)
+                closest = get_2_closest(G)
+                screen.fill((255, 255, 255))
+                first = False
+
+        if not first:
+            if not start_node:
+                text_surface = font.render(("Click Start Node"), True, (0, 0, 0))
+                screen.blit(text_surface, (screen_width // 2, screen_height // 15))
+            if start_node and not end_node:
+                if cleared == False:
+                    screen.fill((255, 255, 255))
+                    cleared = True
+                text_surface = font.render(("Click End Node"), True, (0, 0, 0))
+                screen.blit(text_surface, (screen_width // 2, screen_height // 15))
+
+            for node in closest:
+                for neighbor in closest[node]:
+                    pygame.draw.line(screen, (0, 0, 0), node, neighbor[0], 1)
+            
+            if start_node and end_node:
+                screen.fill((255, 255, 255))
+                distances, p = dijkstra_path(G, start_node)
+                distance = distances[end_node]
+                p_to_end = p[end_node]
+                changed = False
+                print(p_to_end)
+                print(G)
+                plot_shortest(p_to_end)
+
+        for node in entered_nodes:
+            pygame.draw.circle(screen, (0, 0, 0), node, 5)
 
     pygame.display.update()
     
