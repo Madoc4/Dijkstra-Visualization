@@ -201,6 +201,7 @@ set_edges = False
 first = True
 p_to_end = []
 p = {}
+closest = None
 start_node = None
 end_node = None
 cleared = False
@@ -273,10 +274,6 @@ while True:
     for button in buttons:
         button.draw(screen)
         button.check_hover(pygame.mouse.get_pos())
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            if auto_edges_button.check_click(pygame.mouse.get_pos()):
-                    auto_edges = True
-                    input_text = ''
 
     if auto_edges:
         num_nodes_button = Button("Number of Rows/Columns: ", 10, screen_height // 3 * 2 + 100, "freesansbold.ttf", 20, (0, 0, 0), False)
@@ -355,10 +352,6 @@ while True:
                     cleared = True
                 text_surface = font.render(("Click End Node"), True, (0, 0, 0))
                 screen.blit(text_surface, (screen_width // 2, screen_height // 15))
-
-            for node in closest:
-                for neighbor in closest[node]:
-                    pygame.draw.line(screen, (0, 0, 0), node, neighbor[0], 1)
             
             if start_node and end_node:
                 screen.fill((255, 255, 255))
@@ -371,6 +364,11 @@ while True:
 
         for node in entered_nodes:
             pygame.draw.circle(screen, (0, 0, 0), node, 5)
+        
+        if closest:
+            for node in closest:
+                    for neighbor in closest[node]:
+                        pygame.draw.line(screen, (0, 0, 0), node, neighbor[0], 1)
 
     pygame.display.update()
     
