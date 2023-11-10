@@ -4,10 +4,11 @@ import random
 import math
 from heapq import heapify, heappop, heappush
 
-# TO-DO: For Set-Edges: group nodes by connecting them to the two closest nodes. check for scc's and then connect them using Union Find
+# TO-DO: Check for errors in set find distance and implement own heap for dijkstra's and check for scc's to use union find on set_edges
 
 
 pygame.init()
+pygame.display.set_caption("Dijkstra's Algorithm Visualization")
 
 screen_info = pygame.display.Info()
 screen_width = screen_info.current_w
@@ -169,16 +170,40 @@ def get_2_closest(G: dict) -> dict:
     for node in closest:
         temp = G[node]
         temp.sort(key=lambda x: x[1])
-        # since undirected, both edges are connected to eachother
         temp[0][1] = math.floor(temp[0][1])
         temp[2][1] = math.floor(temp[2][1])
         closest[node].append(temp[0])
         closest[node].append(temp[2])
         closest[temp[0][0]].append([node, temp[0][1]])
         closest[temp[2][0]].append([node, temp[2][1]])
-    print(closest)
     return closest
 
+def draw_weight_set_edge(G: dict, edges: list):
+    weights = []
+    for i in range(len(edges) - 1):
+        for neighbor in G[edges[i]]:
+            if edges[i + 1] in neighbor:
+                weights.append(math.floor(neighbor[1]))
+                break
+
+    for i in range(len(edges) - 1):
+        start = edges[i]
+        end = edges[i + 1]
+        weight = weights[i]
+        mid_x = (start[0] + end[0]) // 2
+        mid_y = (start[1] + end[1]) // 2
+
+        angle = math.atan2(end[1] - start[1], end[0] - start[0])
+
+        text_offset = 20
+        x = mid_x + text_offset * math.cos(angle)
+        y = mid_y + text_offset * math.sin(angle)
+
+        text_surface = font.render(str(weight), True, (0, 0, 0))
+        screen.blit(text_surface, (x, y))
+
+    text_surface = font.render(("Total Distance: " + str(sum(weights))), True, (0, 0, 0))
+    screen.blit(text_surface, (screen_width // 2, screen_height // 10 * 9))
 
 buttons = []
 nodes = []
@@ -246,6 +271,7 @@ while True:
 
             if auto_edges_button.check_click(pygame.mouse.get_pos()):
                 auto_edges = True
+                set_edges = False
                 input_text = ''
                 nodes = []
                 edges = []
@@ -329,7 +355,7 @@ while True:
         for edge in edges:
             pygame.draw.line(screen, (0, 0, 0), edge[0], edge[1], 1)
 
-    if set_edges:
+    elif set_edges:
         if selecting:
             text_surface = font.render(("Click To Add Node. Click Space to Stop."), True, (0, 0, 0))
             screen.blit(text_surface, (screen_width / 2, screen_height // 15))
@@ -355,20 +381,24 @@ while True:
             
             if start_node and end_node:
                 screen.fill((255, 255, 255))
-                print(closest)
+                # shouldn't need this but for some reason buttons are not being drawn
+                for button in buttons:
+                    button.draw(screen)
+                    button.check_hover(pygame.mouse.get_pos())
                 distances, p = dijkstra_path(closest, start_node)
                 distance = distances[end_node]
                 p_to_end = p[end_node]
-                changed = False
+                changed = True
                 plot_shortest(p_to_end)
+                draw_weight_set_edge(G, p_to_end)
 
         for node in entered_nodes:
             pygame.draw.circle(screen, (0, 0, 0), node, 5)
         
         if closest:
             for node in closest:
-                    for neighbor in closest[node]:
-                        pygame.draw.line(screen, (0, 0, 0), node, neighbor[0], 1)
+                for neighbor in closest[node]:
+                    pygame.draw.line(screen, (0, 0, 0), node, neighbor[0], 1)
 
     pygame.display.update()
     

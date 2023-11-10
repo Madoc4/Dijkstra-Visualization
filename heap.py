@@ -1,1 +1,3 @@
-# Make own heap data structure
+class Heap():
+    def __init__(self):
+        pass
