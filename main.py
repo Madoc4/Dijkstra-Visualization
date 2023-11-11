@@ -48,6 +48,36 @@ class Button:
         else:
             pygame.draw.rect(screen, (255, 255, 255), self.text_rect, 1)
 
+def dfs(node, G, visited, component):
+    visited[node] = True
+    component.append(node)
+    for neighbor, _ in G[node]:
+        if not visited[neighbor]:
+            dfs(neighbor, G, visited, component)
+
+def get_scc(G: dict) -> list:
+    visited = {node: False for node in G}
+    strongly_connected_components = []
+
+    for node in G:
+        if not visited[node]:
+            component = []
+            dfs(node, G, visited, component)
+            strongly_connected_components.append(component)
+
+    return strongly_connected_components
+
+def min_dist_scc(scc1: list, scc2: list) -> list:
+    min_distance = float('inf')
+    min_edge = None
+    if scc1 != scc2:
+        for node1 in scc1:
+            for node2 in scc2:
+                dist = get_dist(node1, node2)
+                if dist < min_distance:
+                    min_distance = dist
+                    min_edge = [node1, node2]
+    return [min_edge, min_distance]
 
 def dijkstra_path(G, s):
     E = {s}
@@ -100,13 +130,16 @@ def get_dist(node1: list, node2: list):
     return math.sqrt((node1[0] - node2[0])**2 + (node1[1] - node2[1])**2)
 
 def randomize_weights(dist: float) -> int:
-    return math.floor(dist * (random.choices([i for i in range(1,6)], weights=(50, 25, 15, 7, 3))[0]) / 100 + 1)
+    return math.floor(dist * (random.choices([i for i in range(1,6)], weights=(50, 25, 15, 7, 3))[0]) / 10 + 1)
 
-def make_graph(edges: list) -> dict:
+def make_graph(edges: list, randomize: bool) -> dict:
     G = defaultdict(list)
     for edge in edges:
         dist = get_dist(edge[0], edge[1])
-        weight = dist
+        if randomize:
+            weight = randomize_weights(dist)
+        else:
+            weight = dist
         G[edge[0]].append([edge[1], weight])
         G[edge[1]].append([edge[0], weight])
     return G
@@ -212,7 +245,8 @@ edges = []
 quit_button = Button("Quit", 10, 10, "freesansbold.ttf", 20, (255, 0, 0), True)
 set_edges_button = Button("Set Edges", 10, screen_height // 3 + 10, "freesansbold.ttf", 20, (0, 255, 0), True)
 auto_edges_button = Button("Auto Edges", 10, screen_height // 3 * 2 + 10, "freesansbold.ttf", 20, (0, 0, 255), True)
-buttons.extend([quit_button, set_edges_button, auto_edges_button])
+reset_button = Button("Reset", screen_width - 75, 10, "freesansbold.ttf", 20, (255, 0, 0), True)
+buttons.extend([quit_button, set_edges_button, auto_edges_button, reset_button])
 auto_edges = False
 input_rect = pygame.Rect(10, screen_height // 3 * 2 + 120, 140, 32)
 input_text = ''
@@ -247,6 +281,29 @@ while True:
                 active = True
             else: 
                 active = False
+
+            if reset_button.check_click(pygame.mouse.get_pos()):
+                auto_edges = False
+                input_text = ''
+                active = False
+                delete = False
+                new_inp = False
+                changed = False
+                distances = {}
+                distance = None
+                set_edges = False
+                first = True
+                p_to_end = []
+                p = {}
+                closest = None
+                start_node = None
+                end_node = None
+                cleared = False
+                selecting = True
+                entered_nodes = []
+                G = {}
+                pygame.surface.Surface.fill(screen, (255, 255, 255))
+
 
             if auto_edges and not start_node:
                 start_node = get_closest_node(pygame.mouse.get_pos(), nodes)
@@ -323,14 +380,14 @@ while True:
 
             if changed and start_node and end_node:
                 screen.fill((255, 255, 255))
-                G = make_graph(edges)
+                G = make_graph(edges, True)
                 distances, p = dijkstra_path(G, start_node)
                 distance = distances[end_node]
                 p_to_end = p[end_node]
                 changed = False
         
-                plot_shortest(p_to_end)
-                plot_weights(G, p_to_end, distance)
+            plot_shortest(p_to_end)
+            plot_weights(G, p_to_end, distance)
 
 
         if delete: 
@@ -363,8 +420,26 @@ while True:
         if selecting == False:
             if first:
                 edges = get_edges(entered_nodes)
-                G = make_graph(edges)
+                G = make_graph(edges, randomize=False)
                 closest = get_2_closest(G)
+                sccs = get_scc(closest)
+                if len(sccs) > 1:
+                    max_connections = 1  
+
+                    for i in range(len(sccs)):
+                        connections_count = 0
+
+                        closest_sccs = sorted(range(len(sccs)), key=lambda j: min_dist_scc(sccs[i], sccs[j])[1])
+
+                        for j in closest_sccs:
+                            if connections_count < max_connections and i != j:
+                                min_edge, min_distance = min_dist_scc(sccs[i], sccs[j])
+                                print(min_edge, min_distance)
+                                edges.append(min_edge)
+                                closest[min_edge[0]].append([min_edge[1], min_distance])
+                                closest[min_edge[1]].append([min_edge[0], min_distance])
+                                connections_count += 1
+
                 screen.fill((255, 255, 255))
                 first = False
 
@@ -401,4 +476,5 @@ while True:
                     pygame.draw.line(screen, (0, 0, 0), node, neighbor[0], 1)
 
     pygame.display.update()
+    screen.fill((255, 255, 255))
     
